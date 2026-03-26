@@ -1,7 +1,9 @@
 package com.example.contact_app_recycler_view
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
 import android.provider.ContactsContract
 import android.text.Editable
@@ -9,6 +11,7 @@ import android.text.TextWatcher
 import android.view.LayoutInflater
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.enableEdgeToEdge
@@ -17,8 +20,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
 
@@ -30,10 +34,27 @@ class MainActivity : AppCompatActivity(), ContactAdapter.OnContactActionListener
     private lateinit var etSearch: TextInputEditText
     private lateinit var btnSort: Button
     private lateinit var recyclerViewContacts: RecyclerView
+    private lateinit var ivProfilePreview: ImageView
+    private lateinit var fabPickImage: FloatingActionButton
 
     private lateinit var contactAdapter: ContactAdapter
     private val contactList = mutableListOf<Contact>()
     private val filteredList = mutableListOf<Contact>()
+    private var selectedImageUri: Uri? = null
+
+    // Gallery Picker
+    private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            selectedImageUri = it
+            ivProfilePreview.setImageURI(it)
+            // Grant persistable permission
+            try {
+                contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            } catch (e: SecurityException) {
+                // Ignore if not possible
+            }
+        }
+    }
 
     // for contact loading permission request
     private val requestContactsPermission =
@@ -58,6 +79,8 @@ class MainActivity : AppCompatActivity(), ContactAdapter.OnContactActionListener
         etSearch = findViewById(R.id.etSearch)
         btnSort = findViewById(R.id.btnSort)
         recyclerViewContacts = findViewById(R.id.recyclerViewContacts)
+        ivProfilePreview = findViewById(R.id.ivProfilePreview)
+        fabPickImage = findViewById(R.id.fabPickImage)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -65,10 +88,15 @@ class MainActivity : AppCompatActivity(), ContactAdapter.OnContactActionListener
             insets
         }
 
-        // Setup RecyclerView
+        // Setup RecyclerView with 2-column grid
         contactAdapter = ContactAdapter(filteredList, this)
-        recyclerViewContacts.layoutManager = LinearLayoutManager(this)
+        recyclerViewContacts.layoutManager = GridLayoutManager(this, 2)
         recyclerViewContacts.adapter = contactAdapter
+
+        // Image Picker
+        fabPickImage.setOnClickListener {
+            pickImage.launch("image/*")
+        }
 
         // Button Click Listeners
         btnSave.setOnClickListener {
@@ -125,7 +153,7 @@ class MainActivity : AppCompatActivity(), ContactAdapter.OnContactActionListener
             return
         }
 
-        val newContact = Contact(name, phone)
+        val newContact = Contact(name, phone, selectedImageUri?.toString())
         contactList.add(newContact)
         applyFilter()
 
@@ -133,6 +161,8 @@ class MainActivity : AppCompatActivity(), ContactAdapter.OnContactActionListener
 
         etName.text?.clear()
         etPhone.text?.clear()
+        ivProfilePreview.setImageResource(R.drawable.ic_person)
+        selectedImageUri = null
         etName.requestFocus()
     }
 
@@ -157,7 +187,12 @@ class MainActivity : AppCompatActivity(), ContactAdapter.OnContactActionListener
 
     override fun onItemClick(position: Int) {
         val contact = filteredList[position]
-        Toast.makeText(this, "Contact: ${contact.name}\nPhone: ${contact.phone}", Toast.LENGTH_SHORT).show()
+        val intent = Intent(this, ContactDetailsActivity::class.java).apply {
+            putExtra("EXTRA_NAME", contact.name)
+            putExtra("EXTRA_PHONE", contact.phone)
+            putExtra("EXTRA_IMAGE_URI", contact.imageUri)
+        }
+        startActivity(intent)
     }
 
     override fun onEditClick(position: Int) {
@@ -211,7 +246,8 @@ class MainActivity : AppCompatActivity(), ContactAdapter.OnContactActionListener
 
         val projection = arrayOf(
             ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-            ContactsContract.CommonDataKinds.Phone.NUMBER
+            ContactsContract.CommonDataKinds.Phone.NUMBER,
+            ContactsContract.CommonDataKinds.Phone.PHOTO_URI
         )
 
         val cursor = contentResolver.query(
@@ -225,13 +261,15 @@ class MainActivity : AppCompatActivity(), ContactAdapter.OnContactActionListener
         cursor?.use {
             val nameIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
             val phoneIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+            val photoIndex = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.PHOTO_URI)
 
             while (it.moveToNext()) {
                 val name = it.getString(nameIndex) ?: ""
                 val phone = it.getString(phoneIndex) ?: ""
+                val photoUri = it.getString(photoIndex)
 
                 if (name.isNotBlank() && phone.isNotBlank()) {
-                    loadedContacts.add(Contact(name, phone))
+                    loadedContacts.add(Contact(name, phone, photoUri))
                 }
             }
         }

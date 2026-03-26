@@ -1,11 +1,14 @@
 package com.example.contact_app_recycler_view
 
+import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.TextView
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.imageview.ShapeableImageView
 
 class ContactAdapter(
     private var contactList: MutableList<Contact>,
@@ -21,6 +24,7 @@ class ContactAdapter(
     class ContactViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvContactName: TextView = itemView.findViewById(R.id.tvContactName)
         val tvContactPhone: TextView = itemView.findViewById(R.id.tvContactPhone)
+        val ivContactProfile: ShapeableImageView = itemView.findViewById(R.id.ivContactProfile)
         val btnEdit: Button = itemView.findViewById(R.id.btnEdit)
         val btnDelete: Button = itemView.findViewById(R.id.btnDelete)
     }
@@ -36,6 +40,12 @@ class ContactAdapter(
 
         holder.tvContactName.text = currentContact.name
         holder.tvContactPhone.text = currentContact.phone
+        
+        if (currentContact.imageUri != null) {
+            holder.ivContactProfile.setImageURI(Uri.parse(currentContact.imageUri))
+        } else {
+            holder.ivContactProfile.setImageResource(R.drawable.ic_person)
+        }
 
         holder.itemView.setOnClickListener {
             listener.onItemClick(position)

@@ -2,4 +2,20 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Professional Indigo/Slate Theme -->
+    <color name="primary">#6366F1</color>
+    <color name="primaryVariant">#4F46E5</color>
+    <color name="onPrimary">#FFFFFF</color>
+
+    <color name="secondary">#94A3B8</color>
+    <color name="secondaryVariant">#64748B</color>
+    <color name="onSecondary">#FFFFFF</color>
+
+    <color name="background">#F8FAFC</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="onBackground">#1E293B</color>
+    <color name="onSurface">#1E293B</color>
+
+    <color name="error">#EF4444</color>
 </resources>
